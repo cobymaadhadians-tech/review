@@ -10,28 +10,13 @@
     <main class="container">
       <h1>文献管理系统（MVP）</h1>
 
-      <section class="panel">
-        <h2>新增文献（支持单个 PDF 上传）</h2>
-        <form action="/api/literatures" method="post" enctype="multipart/form-data">
-          <div class="grid">
-            <label>标题 <input name="title" required /></label>
-            <label>作者 <input name="authors" required /></label>
-            <label>年份 <input name="year" type="number" min="1900" max="2100" /></label>
-            <label>期刊 <input name="journal" /></label>
-            <label>DOI <input name="doi" /></label>
-            <label>关键词 <input name="keywords" placeholder="神经外科,胶质瘤" /></label>
-            <label class="full">备注 <textarea name="note" rows="3"></textarea></label>
-            <label class="full">PDF 文件 <input name="pdf" type="file" accept="application/pdf" /></label>
-          </div>
-          <button type="submit">保存文献</button>
-        </form>
-      </section>
+      <section class="panel panel-primary">
+        <h2>批量上传 PDF（主流程）</h2>
+        <p class="muted">无需填写标题/作者。系统会自动根据文件名生成标题，并为每个 PDF 创建一条文献记录。</p>
 
-      <section class="panel">
-        <h2>批量上传 PDF（自动解析）</h2>
         <form id="batch-import-form">
           <div class="grid">
-            <label class="full">选择多个 PDF
+            <label class="full">选择多个 PDF 文件
               <input id="batch-files" name="files" type="file" accept="application/pdf" multiple />
             </label>
             <label class="full">或选择本地文件夹（浏览器支持时可用）
@@ -41,11 +26,30 @@
               <input id="batch-doi" name="doi" placeholder="10.xxxx/xxxxx" />
             </label>
           </div>
-          <button type="submit">批量上传并自动建库</button>
+          <button id="batch-submit" type="submit" class="btn-strong">批量上传并自动建库</button>
         </form>
 
         <div id="batch-progress" class="muted"></div>
         <ul id="batch-results" class="result-list"></ul>
+      </section>
+
+      <section class="panel">
+        <details>
+          <summary>单条录入（可选）</summary>
+          <form action="/api/literatures" method="post" enctype="multipart/form-data" class="single-form">
+            <div class="grid">
+              <label>标题 <input name="title" required /></label>
+              <label>作者 <input name="authors" required /></label>
+              <label>年份 <input name="year" type="number" min="1900" max="2100" /></label>
+              <label>期刊 <input name="journal" /></label>
+              <label>DOI <input name="doi" /></label>
+              <label>关键词 <input name="keywords" placeholder="神经外科,胶质瘤" /></label>
+              <label class="full">备注 <textarea name="note" rows="3"></textarea></label>
+              <label class="full">PDF 文件 <input name="pdf" type="file" accept="application/pdf" /></label>
+            </div>
+            <button type="submit">保存单条文献</button>
+          </form>
+        </details>
       </section>
 
       <section class="panel">
@@ -57,7 +61,7 @@
       </section>
 
       <section class="panel">
-        <h2>文献列表</h2>
+        <h2>文献列表（批量导入后会新增多条）</h2>
         <table>
           <thead>
             <tr>
@@ -70,7 +74,7 @@
               <th>PDF</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="literature-table-body">
             {% for item in items %}
             <tr>
               <td>{{ item.id }}</td>
@@ -100,6 +104,22 @@
       const doiInput = document.getElementById('batch-doi');
       const progress = document.getElementById('batch-progress');
       const results = document.getElementById('batch-results');
+      const submitBtn = document.getElementById('batch-submit');
+      const tableBody = document.getElementById('literature-table-body');
+
+      function appendImportedRow(item) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.id ?? '-'}</td>
+          <td>${item.title ?? '-'}</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>${doiInput.value.trim() || '-'}</td>
+          <td>${item.pdf_path ? `<a href="${item.pdf_path}" target="_blank" rel="noopener noreferrer">打开 PDF</a>` : '-'}</td>
+        `;
+        tableBody.prepend(row);
+      }
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -115,6 +135,7 @@
           return;
         }
 
+        submitBtn.disabled = true;
         progress.textContent = `准备上传 ${pickedFiles.length} 个文件...`;
 
         const formData = new FormData();
@@ -136,9 +157,14 @@
             li.textContent = `${item.filename} - ${item.status}${item.id ? ` (ID: ${item.id})` : ''}${item.error ? `，错误: ${item.error}` : ''}`;
             li.className = item.status === 'imported' ? 'ok' : 'fail';
             results.appendChild(li);
+            if (item.status === 'imported') {
+              appendImportedRow(item);
+            }
           }
         } catch (err) {
           progress.textContent = `批量导入失败：${err}`;
+        } finally {
+          submitBtn.disabled = false;
         }
       });
     </script>

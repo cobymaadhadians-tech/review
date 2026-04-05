@@ -50,6 +50,8 @@ def test_batch_import_with_filename_parsing():
     assert payload["total"] == 2
     assert payload["imported"] == 2
     assert payload["failed"] == 0
+    assert all(item["title"] for item in payload["results"])
+    assert all(str(item["pdf_path"]).startswith("/data/pdfs/") for item in payload["results"])
 
     list_resp = client.get("/api/literatures?query=Glioma")
     assert list_resp.status_code == 200

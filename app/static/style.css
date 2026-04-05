@@ -19,6 +19,11 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+.panel-primary {
+  border: 2px solid #93c5fd;
+  background: #f8fbff;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -51,6 +56,19 @@ button {
   color: #fff;
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.btn-strong {
+  font-weight: 700;
+}
+
+.single-form {
+  margin-top: 12px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -78,7 +96,7 @@ th {
 
 .muted {
   margin-top: 8px;
-  color: #6b7280;
+  color: #4b5563;
 }
 
 .result-list {

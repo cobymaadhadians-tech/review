@@ -92,6 +92,8 @@ def api_batch_import_literatures(
             "filename": upload.filename,
             "status": "skipped",
             "id": None,
+            "title": None,
+            "pdf_path": None,
             "error": None,
         }
 
@@ -125,6 +127,8 @@ def api_batch_import_literatures(
             lit_id = create_literature(payload)
             entry["status"] = "imported"
             entry["id"] = lit_id
+            entry["title"] = title
+            entry["pdf_path"] = pdf_path
         except Exception as exc:  # keep batch processing alive per file
             entry["error"] = str(exc)
 
