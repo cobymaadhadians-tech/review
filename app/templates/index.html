@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>文献管理系统 MVP</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>文献管理系统（MVP）</h1>
+
+      <section class="panel">
+        <h2>新增文献（支持单个 PDF 上传）</h2>
+        <form action="/api/literatures" method="post" enctype="multipart/form-data">
+          <div class="grid">
+            <label>标题 <input name="title" required /></label>
+            <label>作者 <input name="authors" required /></label>
+            <label>年份 <input name="year" type="number" min="1900" max="2100" /></label>
+            <label>期刊 <input name="journal" /></label>
+            <label>DOI <input name="doi" /></label>
+            <label>关键词 <input name="keywords" placeholder="神经外科,胶质瘤" /></label>
+            <label class="full">备注 <textarea name="note" rows="3"></textarea></label>
+            <label class="full">PDF 文件 <input name="pdf" type="file" accept="application/pdf" /></label>
+          </div>
+          <button type="submit">保存文献</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>批量上传 PDF（自动解析）</h2>
+        <form id="batch-import-form">
+          <div class="grid">
+            <label class="full">选择多个 PDF
+              <input id="batch-files" name="files" type="file" accept="application/pdf" multiple />
+            </label>
+            <label class="full">或选择本地文件夹（浏览器支持时可用）
+              <input id="batch-folder" type="file" accept="application/pdf" webkitdirectory directory multiple />
+            </label>
+            <label>批量 DOI（可选）
+              <input id="batch-doi" name="doi" placeholder="10.xxxx/xxxxx" />
+            </label>
+          </div>
+          <button type="submit">批量上传并自动建库</button>
+        </form>
+
+        <div id="batch-progress" class="muted"></div>
+        <ul id="batch-results" class="result-list"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>检索</h2>
+        <form action="/" method="get" class="search-row">
+          <input name="query" value="{{ query }}" placeholder="按标题/作者/关键词/DOI 搜索" />
+          <button type="submit">搜索</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>文献列表</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>标题</th>
+              <th>作者</th>
+              <th>年份</th>
+              <th>期刊</th>
+              <th>DOI</th>
+              <th>PDF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td>{{ item.id }}</td>
+              <td>{{ item.title }}</td>
+              <td>{{ item.authors or '-' }}</td>
+              <td>{{ item.year or '-' }}</td>
+              <td>{{ item.journal or '-' }}</td>
+              <td>{{ item.doi or '-' }}</td>
+              <td>
+                {% if item.pdf_path %}
+                <a href="{{ item.pdf_path }}" target="_blank" rel="noopener noreferrer">打开 PDF</a>
+                {% else %}
+                -
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById('batch-import-form');
+      const filesInput = document.getElementById('batch-files');
+      const folderInput = document.getElementById('batch-folder');
+      const doiInput = document.getElementById('batch-doi');
+      const progress = document.getElementById('batch-progress');
+      const results = document.getElementById('batch-results');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        results.innerHTML = '';
+
+        const pickedFiles = [
+          ...Array.from(filesInput.files || []),
+          ...Array.from(folderInput.files || []),
+        ].filter((f) => f.name.toLowerCase().endsWith('.pdf'));
+
+        if (!pickedFiles.length) {
+          progress.textContent = '请至少选择一个 PDF 文件。';
+          return;
+        }
+
+        progress.textContent = `准备上传 ${pickedFiles.length} 个文件...`;
+
+        const formData = new FormData();
+        pickedFiles.forEach((f) => formData.append('files', f));
+        if (doiInput.value.trim()) {
+          formData.append('doi', doiInput.value.trim());
+        }
+
+        try {
+          const resp = await fetch('/api/literatures/batch-import', {
+            method: 'POST',
+            body: formData,
+          });
+          const data = await resp.json();
+
+          progress.textContent = `导入完成：共 ${data.total}，成功 ${data.imported}，失败 ${data.failed}`;
+          for (const item of data.results) {
+            const li = document.createElement('li');
+            li.textContent = `${item.filename} - ${item.status}${item.id ? ` (ID: ${item.id})` : ''}${item.error ? `，错误: ${item.error}` : ''}`;
+            li.className = item.status === 'imported' ? 'ok' : 'fail';
+            results.appendChild(li);
+          }
+        } catch (err) {
+          progress.textContent = `批量导入失败：${err}`;
+        }
+      });
+    </script>
+  </body>
+</html>
