@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>文献管理系统 MVP</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>文献管理系统（MVP）</h1>
+
+      <section class="panel">
+        <h2>新增文献（支持 PDF 上传）</h2>
+        <form action="/api/literatures" method="post" enctype="multipart/form-data">
+          <div class="grid">
+            <label>标题 <input name="title" required /></label>
+            <label>作者 <input name="authors" required /></label>
+            <label>年份 <input name="year" type="number" min="1900" max="2100" /></label>
+            <label>期刊 <input name="journal" /></label>
+            <label>DOI <input name="doi" /></label>
+            <label>关键词 <input name="keywords" placeholder="神经外科,胶质瘤" /></label>
+            <label class="full">备注 <textarea name="note" rows="3"></textarea></label>
+            <label class="full">PDF 文件 <input name="pdf" type="file" accept="application/pdf" /></label>
+          </div>
+          <button type="submit">保存文献</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>检索</h2>
+        <form action="/" method="get" class="search-row">
+          <input name="query" value="{{ query }}" placeholder="按标题/作者/关键词/DOI 搜索" />
+          <button type="submit">搜索</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>文献列表</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>标题</th>
+              <th>作者</th>
+              <th>年份</th>
+              <th>期刊</th>
+              <th>DOI</th>
+              <th>PDF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td>{{ item.id }}</td>
+              <td>{{ item.title }}</td>
+              <td>{{ item.authors }}</td>
+              <td>{{ item.year or '-' }}</td>
+              <td>{{ item.journal or '-' }}</td>
+              <td>{{ item.doi or '-' }}</td>
+              <td>
+                {% if item.pdf_path %}
+                <a href="{{ item.pdf_path }}" target="_blank" rel="noopener noreferrer">打开 PDF</a>
+                {% else %}
+                -
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>
